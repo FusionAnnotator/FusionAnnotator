@@ -1,0 +1,130 @@
+#!/usr/bin/env perl
+
+use strict;
+use warnings;
+use Carp;
+use FindBin;
+use lib ("$FindBin::Bin/PerlLib");
+use Getopt::Long qw(:config posix_default no_ignore_case bundling pass_through);
+use TiedHash;
+
+my $usage = <<__EOUSAGE__;
+
+
+############################################################################
+#
+#  --fusion_annot_lib <string>     /path/to/fusion_annot_lib
+#
+#  and
+#
+#  --annotate <string>             fusion predictions to annotate.
+#
+#      or
+#
+#  --build                         build the index for the fusion_annot_lib/
+#
+############################################################################
+
+
+__EOUSAGE__
+
+    ;
+
+
+my $help_flag;
+my $fusion_annot_lib;
+my $target_fusions_file;
+my $build_flag = 0;
+
+&GetOptions ( 'h' => \$help_flag,
+              
+              'fusion_annot_lib=s' => \$fusion_annot_lib,
+              'annotate=s' => \$target_fusions_file,
+              'build' => \$build_flag,
+              
+    );
+
+if ($help_flag) { die $usage; }
+
+unless ($fusion_annot_lib && ($target_fusions_file || $build_flag) ) { die $usage; }
+
+main: {
+
+    
+    if ($build_flag) {
+        &build_index($fusion_annot_lib);
+    }
+    else {
+        &annotate_fusions($fusion_annot_lib, $target_fusions_file);
+    }
+
+    exit(0);
+}
+
+####
+sub build_index {
+    my ($fusion_annot_lib) = @_;
+
+    my $fusion_lib_idx = "$fusion_annot_lib/fusion_lib.idx";
+    my $build_checkpoint = "$fusion_lib_idx.ok";
+    if (-s $fusion_lib_idx && -e $build_checkpoint) {
+        print STDERR "ERROR, fusion lib index: $fusion_lib_idx already exists from a previous build.  Remove it before trying to rebuild the index again.";
+        exit(1);
+    }
+    
+    my $build_info_file = "$fusion_annot_lib/__build_info.txt";
+    if (! -s $build_info_file) {
+        die "Error, cannot locate the build info file: $build_info_file";
+    }
+
+    
+    my %annotations;
+
+    my @build_info = &parse_build_info($build_info_file);
+    
+    foreach my $info_aref (@build_info) {
+        
+        my ($dat_file, $module_file) = @$info_aref;
+
+        ## load module, parse dat file
+        my $module_file_path = "$fusion_annot_lib/$module_file";
+        
+        require $module_file_path;
+        
+        my $module_name = $module_file;
+        $module_name =~ s/\.pm$//;
+        
+        my $load_function = join("::", $module_name, "load_data");
+
+        my $dat_file_full_path = "$fusion_annot_lib/$dat_file";
+        &$load_function(\%annotations, $dat_file);
+        
+    }
+
+    ## build the index file
+
+    
+    
+
+}
+
+
+####
+sub parse_build_info {
+    my ($build_info_file) = @_;
+
+    my @build_info;
+    
+    open (my $fh, $build_info_file) or die "Error, cannot open file $build_info_file";
+    while (<$fh>) {
+        chomp;
+        if (/^\#/) { next; }
+        unless (/\w/) { next; }
+        my ($filename, $module) = split(/\s+/);
+        push (@build_info, [$filename, $module]);
+    }
+    close $fh;
+
+    return(@build_info);
+}
+
