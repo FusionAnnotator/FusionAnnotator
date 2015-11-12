@@ -8,6 +8,10 @@ use lib ("$FindBin::Bin/PerlLib");
 use Getopt::Long qw(:config posix_default no_ignore_case bundling pass_through);
 use TiedHash;
 
+
+my $max_neighbor_dist = 100000;
+
+
 my $usage = <<__EOUSAGE__;
 
 
@@ -18,7 +22,10 @@ my $usage = <<__EOUSAGE__;
 #  and
 #
 #  --annotate <string>             fusion predictions to annotate.
-#
+#     * annotate options:
+#     --max_neighbor_dist <int>    maximum distance allowed between two fusion partners
+#                                  for a 'neigbhor' annotation to be included.
+#                                  default: $max_neighbor_dist
 #      or
 #
 #  --build                         build the index for the fusion_annot_lib/
@@ -42,6 +49,8 @@ my $build_flag = 0;
               'annotate=s' => \$target_fusions_file,
               'build' => \$build_flag,
               
+              'max_neighbor_dist=i' => \$max_neighbor_dist,
+              
     );
 
 if ($help_flag) { die $usage; }
@@ -55,7 +64,7 @@ main: {
         &build_index($fusion_annot_lib);
     }
     else {
-        &annotate_fusions($fusion_annot_lib, $target_fusions_file);
+        &annotate_fusions($fusion_annot_lib, $target_fusions_file, $max_neighbor_dist);
     }
 
     exit(0);
@@ -158,5 +167,127 @@ sub parse_build_info {
     close $fh;
 
     return(@build_info);
+}
+
+####
+sub annotate_fusions {
+    my ($fusion_annot_lib, $target_fusions_file, $max_neighbor_dist) = @_;
+
+    my $fusion_lib_idx = "$fusion_annot_lib/fusion_lib.idx";
+    
+    my $idx = new TiedHash( { use => $fusion_lib_idx } );
+    
+    open (my $fh, $target_fusions_file) or die "Error, cannot open file $target_fusions_file";
+    while (<$fh>) {
+        chomp;
+        if (/^\#/) { next; }
+        unless (/\w/) { next; }
+        my @x = split(/\t/);
+        my $fusion = $x[0];
+        if ($fusion =~ /\|/) {
+            $fusion =~ s/^.*\|//;
+        }
+        my ($geneA, $geneB) = split(/--/, $fusion);
+        
+        if (my @annots = &get_annotations($idx, $geneA, $geneB, $max_neighbor_dist)) {
+            push (@x, join(",", @annots));
+        }
+        else {
+            push (@x, '.');
+        }
+        
+        print join("\t", @x) . "\n";
+    }
+    close $fh;
+
+    return;
+}
+    
+
+####
+sub get_annotations {
+    my ($idx, $geneA, $geneB, $max_neighbor_dist) = @_;
+    
+    if ($geneA eq $geneB) {
+        return("[SELFIE]");
+    }
+    
+    my $annotation_text = $idx->get_value("$geneA--$geneB");
+    
+    my @annotations;
+    if ($annotation_text) {
+        push (@annotations, $annotation_text);
+    }
+
+    if (my @dist_annots = &get_distance_annotation($idx, $geneA, $geneB, $max_neighbor_dist)) {
+        push (@annotations, @dist_annots);
+    }
+    
+    
+    return(@annotations);
+}
+
+####
+sub get_distance_annotation {
+    my ($idx, $geneA, $geneB, $max_neighbor_dist) = @_;
+    
+    my $chr_info_A = $idx->get_value($geneA);
+    my $chr_info_B = $idx->get_value($geneB);
+    
+    unless ($chr_info_A && $chr_info_B) {
+        # cant compare them
+        return();
+    }
+    
+    #print STDERR "A: $chr_info_A\tB: $chr_info_B\n";
+    
+
+    my ($chrA, $coords_A, $orientA) = split(/:/, $chr_info_A);
+    $coords_A =~ s/\,.*$//;
+    my ($lendA, $rendA) = split(/-/, $coords_A);
+    
+    my ($chrB, $coords_B, $orientB) = split(/:/, $chr_info_B);
+    $coords_B =~ s/\,.*$//;
+    my ($lendB, $rendB) = split(/-/, $coords_B);
+    
+    my $dist = -1;
+    if ($lendA < $rendB && $rendA > $lendB) {
+        # overlap
+        $dist = 0;
+    }
+
+    my @annotations;
+
+    if ($chrA eq $chrB) {
+    
+        my @coords = sort {$a<=>$b} ($lendA, $rendA, $lendB, $rendB);
+        $dist = $coords[2] - $coords[1];
+        
+        
+        
+        if ($dist > 0 && $dist <= $max_neighbor_dist) {
+            
+            if ($lendA < $rendB && $rendA > $lendB) {
+                push (@annotations, "NEIGHBORS_OVERLAP:$orientA:$orientB:[$dist]");
+            }
+            elsif ($orientA ne $orientB) { 
+                push(@annotations, "LOCAL_INVERSION:$orientA:$orientB:[$dist]");
+            }
+            elsif ($orientA eq '+' && $lendB < $rendA) { 
+                push (@annotations, "LOCAL_REARRANGEMENT:$orientA:[$dist]");
+            }
+            elsif ($orientA eq '-' && $rendB > $lendA) { 
+                push (@annotations, "LOCAL_REARRANGEMENT:$orientA:[$dist]"); 
+            }
+            else {
+                # no other weirdness, just neighbors, probably readthru transcription
+                
+                push (@annotations, "NEIGHBORS\[$dist]");
+            }
+        }
+    }
+
+    
+    return(@annotations);
 }
 
