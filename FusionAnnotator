@@ -97,14 +97,46 @@ sub build_index {
         my $load_function = join("::", $module_name, "load_data");
 
         my $dat_file_full_path = "$fusion_annot_lib/$dat_file";
-        &$load_function(\%annotations, $dat_file);
+
+        no strict 'refs';
+        &$load_function(\%annotations, $dat_file_full_path);
         
     }
 
     ## build the index file
-
+    {
+        # create the database
+        
+        print STDERR "-writing db idx\n\n";
+        
+        my $idx = new TiedHash( { create => "$fusion_lib_idx" } );
+        
+        my @gene_pairs = keys %annotations;
+        my $counter = 0;
+        my $num_gene_pairs = scalar(@gene_pairs);
+        
+        foreach my $gene_pair (@gene_pairs) {
+            $counter++;
+            if ($counter % 1000 == 0) {
+                my $pct_done = sprintf("%.2f", $counter/$num_gene_pairs * 100);
+                print STDERR "\r[$pct_done\% done]    ";
+            }
+            
+            my @annots = keys %{$annotations{$gene_pair}};
+            
+            @annots = sort @annots;
+            my $annot_string = join(",", @annots);
+            
+            $idx->store_key_value($gene_pair, $annot_string);
+            
+        }
+    }
     
+    system("touch $build_checkpoint");
     
+    print STDERR "\n\nDone.\n";
+    
+    exit(0);
 
 }
 
