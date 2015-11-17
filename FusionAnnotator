@@ -42,6 +42,7 @@ my $help_flag;
 my $fusion_annot_lib;
 my $target_fusions_file;
 my $build_flag = 0;
+my $force_flag = 0;
 
 &GetOptions ( 'h' => \$help_flag,
               
@@ -51,6 +52,8 @@ my $build_flag = 0;
               
               'max_neighbor_dist=i' => \$max_neighbor_dist,
               
+              'force' => \$force_flag,
+
     );
 
 if ($help_flag) { die $usage; }
@@ -76,8 +79,8 @@ sub build_index {
 
     my $fusion_lib_idx = "$fusion_annot_lib/fusion_lib.idx";
     my $build_checkpoint = "$fusion_lib_idx.ok";
-    if (-s $fusion_lib_idx && -e $build_checkpoint) {
-        print STDERR "ERROR, fusion lib index: $fusion_lib_idx already exists from a previous build.  Remove it before trying to rebuild the index again.";
+    if (-s $fusion_lib_idx && -e $build_checkpoint && ! $force_flag) {
+        print STDERR "\n\n\tERROR, fusion lib index: $fusion_lib_idx already exists from a previous build.  Remove it before trying to rebuild the index again.\n\n";
         exit(1);
     }
     

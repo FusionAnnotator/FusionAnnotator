@@ -7,7 +7,7 @@ use Carp;
 sub load_data {
     my ($annotations_href, $blast_pairs_gz_filename) = @_;
     
-    print STDERR "-parsing blast pairs: $blast_pairs_gz_filename";
+    print STDERR "-parsing blast pairs: $blast_pairs_gz_filename\n";
     
     open (my $fh, "gunzip -c $blast_pairs_gz_filename | ") or confess "Error, cannot read file via: gunzip -c $blast_pairs_gz_filename";
     while (<$fh>) {
