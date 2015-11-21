@@ -7,7 +7,7 @@ use Carp;
 sub load_data {
     my ($annotations_href, $gtex_normals) = @_;
 
-    print STDERR "-parsing $gtex_normals\n";
+    print STDERR "-parsing GTEx_v2 $gtex_normals\n";
     
     open (my $fh, $gtex_normals) or confess "Error, cannot open file $gtex_normals";
     
