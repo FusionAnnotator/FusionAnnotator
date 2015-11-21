@@ -10,8 +10,7 @@ sub load_data {
     print STDERR "-parsing GTEx_v2 $gtex_normals\n";
     
     open (my $fh, $gtex_normals) or confess "Error, cannot open file $gtex_normals";
-    
-    my $header = <$fh>;
+
     while (<$fh>) {
         chomp;
         my ($fusion, $num_normals, $pct_normals) = split(/\t/);

@@ -10,14 +10,14 @@ use TiedHash;
 
 
 my $max_neighbor_dist = 100000;
-
+my $fusion_annot_lib = "$FindBin::Bin/Hg19_CTAT_fusion_annotator_lib";
 
 my $usage = <<__EOUSAGE__;
 
 
 ############################################################################
 #
-#  --fusion_annot_lib <string>     /path/to/fusion_annot_lib
+#  --fusion_annot_lib <string>     /path/to/fusion_annot_lib (default: $fusion_annot_lib)
 #
 #  and
 #
@@ -39,7 +39,7 @@ __EOUSAGE__
 
 
 my $help_flag;
-my $fusion_annot_lib;
+
 my $target_fusions_file;
 my $build_flag = 0;
 my $force_flag = 0;
