@@ -1,0 +1,12 @@
+#data_set_name	module.pm
+Stransky2014_GTEx_normals_pairs.txt	GTEX_normals.pm
+Yoshihara.Oncogene2014.TCGA_recurrent_fusions.txt	TCGA_fusions.pm
+blast_pairs.gz	blast_pairs.pm
+gene_spans.txt	gene_spans.pm
+nucl_clusters.txt	nucl_clusters.pm
+prot_clusters.txt	prot_clusters.pm
+mitelman_db_recurrent_summary.txt	mitelman_db.pm
+cosmic_fusion_list.txt	cosmic_fusions.pm
+chimerdb_omim_disease_genes.txt	chimerdb_omim_disease_genes.pm
+chimerdb_pubmed_chims.txt	chimerdb_pubmed_chims.pm
+GTEx_v2.txt	GTEx_v2.pm
