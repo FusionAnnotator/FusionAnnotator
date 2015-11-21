@@ -191,6 +191,10 @@ sub annotate_fusions {
             $fusion =~ s/^.*\|//;
         }
         my ($geneA, $geneB) = split(/--/, $fusion);
+        unless ($geneA && $geneB) {
+            print STDERR "ERROR: cannot parse $fusion as in the geneA--geneB format, skipping...\n";
+            next;
+        }
         
         if (my @annots = &get_annotations($idx, $geneA, $geneB, $max_neighbor_dist)) {
             push (@x, join(",", @annots));
