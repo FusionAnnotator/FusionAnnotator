@@ -13,9 +13,9 @@ sub load_data {
 
     while (<$fh>) {
         chomp;
-        my ($fusion, $num_normals, $pct_normals) = split(/\t/);
+        my ($fusion, $num_normals, $pct_normals, $tissue_types) = split(/\t/);
             
-        $annotations_href->{$fusion}->{"GTEx_v2:$num_normals=$pct_normals%"} = 1;
+        $annotations_href->{$fusion}->{"GTEx_v2:{count=$num_normals;pct=$pct_normals%;dist=$tissue_types}"} = 1;
     }
     close $fh;
     
