@@ -11,4 +11,4 @@ chimerdb_omim_disease_genes.txt	chimerdb_omim_disease_genes.pm
 chimerdb_pubmed_chims.txt	chimerdb_pubmed_chims.pm
 GTEx_v2.txt	GTEx_v2.pm
 Stransky2015_GTEx_normal_pairs.txt	Stransky2015_normals.pm
-CCLE.fusions.dat	CCLE_fusions.pm
+Klijn.fusions.dat	Klijn_fusions.pm

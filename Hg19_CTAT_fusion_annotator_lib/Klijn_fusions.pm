@@ -1,15 +1,20 @@
-package CCLE_fusions;
+package Klijn_fusions;
 
 use strict;
 use warnings;
 use Carp;
 
-sub load_data {
-    my ($annotations_href, $ccle_fusions) = @_;
 
-    print STDERR "-parsing CCLE_fusions: $ccle_fusions\n";
+# fusions reported in Klijn et al. http://www.ncbi.nlm.nih.gov/pubmed/25485619 
+# A comprehensive transcriptional portrait of human cancer cell lines.
+# Nat Biotechnol. 2015 Mar;33(3):306-12. doi: 10.1038/nbt.3080. Epub 2014 Dec 8.
+
+sub load_data {
+    my ($annotations_href, $klijn_fusions) = @_;
+
+    print STDERR "-parsing Klijn et al. cancer cell line fusions: $klijn_fusions\n";
     
-    open (my $fh, $ccle_fusions) or confess "Error, cannot open file $ccle_fusions";
+    open (my $fh, $klijn_fusions) or confess "Error, cannot open file $klijn_fusions";
    
     my %fusion_to_tissue_counts;
    
@@ -38,7 +43,7 @@ sub load_data {
             push (@annots, "$tissue=$count");
         }
         
-        my $annot = "{CCLE:" . join(",", @annots) . "}";
+        my $annot = "{Klijn_CCL:" . join(",", @annots) . "}";
         $annot =~ s/\s+/_/g;
         
         $annotations_href->{$fusion}->{$annot} = 1;

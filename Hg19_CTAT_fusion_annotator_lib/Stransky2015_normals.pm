@@ -20,7 +20,7 @@ sub load_data {
         
         my $pct_normals = sprintf("$count/$sample_count=%.2f%%", $count/$sample_count*100);
         
-        $annotations_href->{$fusion}->{"GTEx\&TCGA_normals:$pct_normals"} = 1;
+        $annotations_href->{$fusion}->{"GTEx\&tcga_normals:$pct_normals"} = 1;
     }
     close $fh;
     
