@@ -30,6 +30,10 @@ my $usage = <<__EOUSAGE__;
 #
 #  --build                         build the index for the fusion_annot_lib/
 #
+#  *  optional:
+#
+#  --fusion_name_col <int>         default: 0
+#
 ############################################################################
 
 
@@ -44,6 +48,8 @@ my $target_fusions_file;
 my $build_flag = 0;
 my $force_flag = 0;
 
+my $FUSION_NAME_COLUMN = 0;
+
 &GetOptions ( 'h' => \$help_flag,
               
               'fusion_annot_lib=s' => \$fusion_annot_lib,
@@ -53,6 +59,8 @@ my $force_flag = 0;
               'max_neighbor_dist=i' => \$max_neighbor_dist,
               
               'force' => \$force_flag,
+              
+              'fusion_name_col=i' => \$FUSION_NAME_COLUMN,
 
     );
 
@@ -186,7 +194,7 @@ sub annotate_fusions {
         if (/^\#/) { next; }
         unless (/\w/) { next; }
         my @x = split(/\t/);
-        my $fusion = $x[0];
+        my $fusion = $x[$FUSION_NAME_COLUMN];
         if ($fusion =~ /\|/) {
             $fusion =~ s/^.*\|//;
         }
