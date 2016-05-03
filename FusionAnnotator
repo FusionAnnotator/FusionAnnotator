@@ -238,6 +238,13 @@ sub get_annotations {
         push (@annotations, @dist_annots);
     }
     
+    ## check for individual gene annotations (eg. oncogene)
+
+    foreach my $gene ($geneA, $geneB) {
+        if (my $geneAnnot = $idx->get_value("$gene")) {
+            push (@annotations, "${gene}" . "->" . "$geneAnnot");
+        }
+    }
     
     return(@annotations);
 }
