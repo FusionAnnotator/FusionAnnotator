@@ -19,7 +19,11 @@ sub load_data {
             $gene_id = $gene_name;
         }
             
-        $annotations_href->{$gene_id}->{"$chr:$lend-$rend:$orient"} = 1;
+        $annotations_href->{"$gene_id$;COORDS"}->{"$chr:$lend-$rend:$orient"} = 1; # hacky way of specifying coordinate info for direct coordinate info lookups.
+
+        # also adding it as a generic gene annotation
+        $annotations_href->{"$gene_id"}->{"$chr:$lend-$rend:$orient"} = 1; # hacky way of specifying coordinate info for direct coordinate info lookups.
+        
     }
     close $fh;
     

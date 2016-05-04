@@ -255,8 +255,8 @@ sub get_annotations {
 sub get_distance_annotation {
     my ($idx, $geneA, $geneB, $max_neighbor_dist) = @_;
     
-    my $chr_info_A = $idx->get_value($geneA);
-    my $chr_info_B = $idx->get_value($geneB);
+    my $chr_info_A = $idx->get_value("$geneA$;COORDS"); # hacky way of specifying the coordinate info.
+    my $chr_info_B = $idx->get_value("$geneB$;COORDS");
     
     unless ($chr_info_A && $chr_info_B) {
         # cant compare them
