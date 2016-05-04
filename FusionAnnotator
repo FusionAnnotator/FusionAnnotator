@@ -190,6 +190,7 @@ sub annotate_fusions {
     
     open (my $fh, $target_fusions_file) or die "Error, cannot open file $target_fusions_file";
     while (<$fh>) {
+        my $line = $_;
         chomp;
         if (/^\#/) { next; }
         unless (/\w/) { next; }
@@ -200,7 +201,8 @@ sub annotate_fusions {
         }
         my ($geneA, $geneB) = split(/--/, $fusion);
         unless ($geneA && $geneB) {
-            print STDERR "ERROR: cannot parse $fusion as in the geneA--geneB format, skipping...\n";
+            print STDERR "ERROR: cannot parse $fusion as in the geneA--geneB format, skipping...$line";
+            print $line;
             next;
         }
         
