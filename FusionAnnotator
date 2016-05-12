@@ -32,7 +32,7 @@ my $usage = <<__EOUSAGE__;
 #
 #  *  optional:
 #
-#  --fusion_name_col <int>         default: 0
+#  --fusion_name_col|C <int>         default: 0
 #
 ############################################################################
 
@@ -60,7 +60,7 @@ my $FUSION_NAME_COLUMN = 0;
               
               'force' => \$force_flag,
               
-              'fusion_name_col=i' => \$FUSION_NAME_COLUMN,
+              'fusion_name_col|C=i' => \$FUSION_NAME_COLUMN,
 
     );
 
@@ -192,7 +192,10 @@ sub annotate_fusions {
     while (<$fh>) {
         my $line = $_;
         chomp;
-        if (/^\#/) { next; }
+        if (/^\#/) { 
+            print $line;
+            next; 
+        }
         unless (/\w/) { next; }
         my @x = split(/\t/);
         my $fusion = $x[$FUSION_NAME_COLUMN];
