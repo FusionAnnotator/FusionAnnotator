@@ -187,13 +187,15 @@ sub annotate_fusions {
     my $fusion_lib_idx = "$fusion_annot_lib/fusion_lib.idx";
     
     my $idx = new TiedHash( { use => $fusion_lib_idx } );
-    
+
+    my $is_first = 1;
     open (my $fh, $target_fusions_file) or die "Error, cannot open file $target_fusions_file";
     while (<$fh>) {
         my $line = $_;
         chomp;
-        if (/^\#/) { 
-            print $line;
+        if (/^\#/ && $is_first) { 
+            print "$_\tannots\n";
+            $is_first = 0;
             next; 
         }
         unless (/\w/) { next; }
