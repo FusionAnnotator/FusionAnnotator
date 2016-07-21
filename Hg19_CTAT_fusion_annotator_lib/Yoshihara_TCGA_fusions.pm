@@ -1,4 +1,4 @@
-package TCGA_fusions;
+package Yoshihara_TCGA_fusions;
 
 use strict;
 use warnings;
@@ -32,7 +32,7 @@ sub load_data {
             }
         }
         
-        my $fusion_annot = "TCGA_num_samples[" . join("|", @fusion_annots) . "]";
+        my $fusion_annot = "YOSHIHARA_TCGA_num_samples[" . join("|", @fusion_annots) . "]";
         
         $annotations_href->{$fusion}->{$fusion_annot} = 1;
         
