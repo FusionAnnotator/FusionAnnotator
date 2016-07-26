@@ -17,3 +17,4 @@ allonco_20130923.tsv	Oncogenes_Bushman.pm
 panel_and_misc_annotations.txt	MiscAnnotations.pm
 gene_symbol_to_gene_names.txt	MiscAnnotations.pm
 dgd_Hsa_all_v71.tsv	paralogs.pm
+genefam_list.txt	genefam.pm
