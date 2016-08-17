@@ -1,6 +1,7 @@
 #data_set_name	module.pm
-GTEx_FI.July2016.txt	GTEx_FI_July2016.pm
-Stransky2014_GTEx_normals_pairs.txt	GTEX_normals.pm
+#GTEx_FI.July2016.txt	GTEx_FI_July2016.pm
+GTEx_Recurrent_Blacklist_July222016.txt	GTEx_Recurrent_Blacklist_July222016.pm
+#Stransky2014_GTEx_normals_pairs.txt	GTEX_normals.pm
 Yoshihara.Oncogene2014.TCGA_recurrent_fusions.txt	Yoshihara_TCGA_fusions.pm
 blast_pairs.gz	blast_pairs.pm
 gene_spans.txt	gene_spans.pm
