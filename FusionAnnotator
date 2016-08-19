@@ -289,10 +289,13 @@ sub get_distance_annotation {
 
     if ($chrA eq $chrB) {
     
+
         my @coords = sort {$a<=>$b} ($lendA, $rendA, $lendB, $rendB);
         $dist = $coords[2] - $coords[1];
+
+        my $num_MB = sprintf("%.2fMb", $dist/1e6);
         
-        
+        push (@annotations, "INTRACHROMOSOMAL[$num_MB]");
         
         if ($dist > 0 && $dist <= $max_neighbor_dist) {
             
@@ -315,7 +318,10 @@ sub get_distance_annotation {
             }
         }
     }
-
+    else {
+        push (@annotations, "INTERCHROMOSOMAL");
+    }
+    
     
     return(@annotations);
 }
