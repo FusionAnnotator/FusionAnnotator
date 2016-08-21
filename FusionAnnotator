@@ -319,7 +319,7 @@ sub get_distance_annotation {
         }
     }
     else {
-        push (@annotations, "INTERCHROMOSOMAL");
+        push (@annotations, "INTERCHROMOSOMAL[$chrA--$chrB]");
     }
     
     
