@@ -295,7 +295,7 @@ sub get_distance_annotation {
 
         my $num_MB = sprintf("%.2fMb", $dist/1e6);
         
-        push (@annotations, "INTRACHROMOSOMAL[$num_MB]");
+        push (@annotations, "INTRACHROMOSOMAL[$chrA:$num_MB]");
         
         if ($dist > 0 && $dist <= $max_neighbor_dist) {
             
