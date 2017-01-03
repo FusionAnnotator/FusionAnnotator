@@ -230,26 +230,39 @@ sub annotate_fusions {
 sub get_annotations {
     my ($idx, $geneA, $geneB, $max_neighbor_dist) = @_;
     
+    
     if ($geneA eq $geneB) {
         return("[SELFIE]");
     }
-    
-    my $annotation_text = $idx->get_value("$geneA--$geneB");
-    
-    my @annotations;
-    if ($annotation_text) {
-        push (@annotations, $annotation_text);
-    }
 
-    if (my @dist_annots = &get_distance_annotation($idx, $geneA, $geneB, $max_neighbor_dist)) {
-        push (@annotations, @dist_annots);
-    }
-    
+
     ## check for individual gene annotations (eg. oncogene)
+    my @genesA = split(/,/, $geneA);
+    my @genesB = split(/,/, $geneB);
+    
 
-    foreach my $gene ($geneA, $geneB) {
+    my @annotations;
+    
+    # add general gene info:
+    foreach my $gene (@genesA, @genesB) {
         if (my $geneAnnot = $idx->get_value("$gene")) {
             push (@annotations, "${gene}" . "->" . "$geneAnnot");
+        }
+    }
+    
+    # get annot pair info:
+    foreach my $geneA (@genesA) {
+        foreach my $geneB (@genesB) {
+            
+            my $annotation_text = $idx->get_value("$geneA--$geneB");
+                        
+            if ($annotation_text) {
+                push (@annotations, $annotation_text);
+            }
+            
+            if (my @dist_annots = &get_distance_annotation($idx, $geneA, $geneB, $max_neighbor_dist)) {
+                push (@annotations, @dist_annots);
+            }
         }
     }
     
