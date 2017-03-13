@@ -206,7 +206,7 @@ sub annotate_fusions {
         }
         my ($geneA, $geneB) = split(/--/, $fusion);
         unless ($geneA && $geneB) {
-            print STDERR "ERROR: cannot parse $fusion as in the geneA--geneB format, skipping...$line";
+            print STDERR "ERROR: cannot parse $fusion as in the geneA--geneB format, skipping...$line" unless ($is_first);
             print $line;
             next;
         }
@@ -219,6 +219,7 @@ sub annotate_fusions {
         }
         
         print join("\t", @x) . "\n";
+        $is_first = 0;
     }
     close $fh;
 
