@@ -9,15 +9,15 @@ use Getopt::Long qw(:config posix_default no_ignore_case bundling pass_through);
 use TiedHash;
 use File::Basename;
 
+
 my $max_neighbor_dist = 100000;
-my $fusion_annot_lib = "$FindBin::Bin/Hg19_CTAT_fusion_annotator_lib";
 
 my $usage = <<__EOUSAGE__;
 
 
 ############################################################################
 #
-#  --fusion_annot_lib <string>     /path/to/fusion_annot_lib (default: $fusion_annot_lib)
+#  --genome_lib_dir <string>      directory containing genome lib (see http://STAR-Fusion.github.io)
 #
 #  and
 #
@@ -26,16 +26,9 @@ my $usage = <<__EOUSAGE__;
 #     --max_neighbor_dist <int>    maximum distance allowed between two fusion partners
 #                                  for a 'neigbhor' annotation to be included.
 #                                  default: $max_neighbor_dist
-#      or
-#
-#  --build                         build the index for the fusion_annot_lib/
-#
 #  *  optional:
 #
 #  --fusion_name_col|C <int>         default: 0
-#
-#  --custom_import <string>       any custom perl module to call to include custom annotations.
-#                                 (requires --build)
 #
 ############################################################################
 
@@ -47,170 +40,44 @@ __EOUSAGE__
 
 my $help_flag;
 
+my $genome_lib_dir;
 my $target_fusions_file;
-my $build_flag = 0;
-my $force_flag = 0;
-
 my $FUSION_NAME_COLUMN = 0;
 
-my $custom_import = undef;
 
 &GetOptions ( 'h' => \$help_flag,
               
-              'fusion_annot_lib=s' => \$fusion_annot_lib,
+              'genome_lib_dir=s' => \$genome_lib_dir,
               'annotate=s' => \$target_fusions_file,
-              'build' => \$build_flag,
               
               'max_neighbor_dist=i' => \$max_neighbor_dist,
               
-              'force' => \$force_flag,
-              
               'fusion_name_col|C=i' => \$FUSION_NAME_COLUMN,
 
-              'custom_import=s' => \$custom_import,
               
     );
 
 if ($help_flag) { die $usage; }
 
-unless ($fusion_annot_lib && ($target_fusions_file || $build_flag) ) { die $usage; }
-
-if ($custom_import && ! $build_flag) {
-    die "Error, can only use --custom_import when using --build";
-}
-
+unless ($genome_lib_dir && $target_fusions_file) { die $usage; }
 
 main: {
 
-    
-    if ($build_flag) {
-        &build_index($fusion_annot_lib);
-    }
-    else {
-        &annotate_fusions($fusion_annot_lib, $target_fusions_file, $max_neighbor_dist);
-    }
-
-    exit(0);
-}
-
-####
-sub build_index {
-    my ($fusion_annot_lib) = @_;
-
-    my $fusion_lib_idx = "$fusion_annot_lib/fusion_lib.idx";
-    my $build_checkpoint = "$fusion_lib_idx.ok";
-    if (-s $fusion_lib_idx && -e $build_checkpoint && ! $force_flag) {
-        print STDERR "\n\n\tERROR, fusion lib index: $fusion_lib_idx already exists from a previous build.  Remove it before trying to rebuild the index again.\n\n";
-        exit(1);
-    }
-    
-    my $build_info_file = "$fusion_annot_lib/__build_info.txt";
-    if (! -s $build_info_file) {
-        die "Error, cannot locate the build info file: $build_info_file";
-    }
-
-    
-    my %annotations;
-
-    my @build_info = &parse_build_info($build_info_file);
-
-
-    if ($custom_import) {
-        
-        require $custom_import;
-
-        my $module_name = basename($custom_import);
-        $module_name =~ s/\.pm$//;
-        
-        my $load_function = join("::", $module_name, "load_data");
-        no strict 'refs';
-        &$load_function(\%annotations);
-    }
-    
-    
-    foreach my $info_aref (@build_info) {
-        
-        my ($dat_file, $module_file) = @$info_aref;
-
-        ## load module, parse dat file
-        my $module_file_path = "$fusion_annot_lib/$module_file";
-        
-        require $module_file_path;
-        
-        my $module_name = $module_file;
-        $module_name =~ s/\.pm$//;
-        
-        my $load_function = join("::", $module_name, "load_data");
-
-        my $dat_file_full_path = "$fusion_annot_lib/$dat_file";
-
-        no strict 'refs';
-        &$load_function(\%annotations, $dat_file_full_path);
-        
-    }
-
-    ## build the index file
-    {
-        # create the database
-        
-        print STDERR "-writing db idx\n\n";
-        
-        my $idx = new TiedHash( { create => "$fusion_lib_idx" } );
-        
-        my @gene_pairs = keys %annotations;
-        my $counter = 0;
-        my $num_gene_pairs = scalar(@gene_pairs);
-        
-        foreach my $gene_pair (@gene_pairs) {
-            $counter++;
-            if ($counter % 1000 == 0) {
-                my $pct_done = sprintf("%.2f", $counter/$num_gene_pairs * 100);
-                print STDERR "\r[$pct_done\% done]    ";
-            }
-            
-            my @annots = keys %{$annotations{$gene_pair}};
-            
-            @annots = sort @annots;
-            my $annot_string = join(",", @annots);
-            
-            $idx->store_key_value($gene_pair, $annot_string);
-            
-        }
-    }
-    
-    system("touch $build_checkpoint");
-    
-    print STDERR "\n\nDone.\n";
+    &annotate_fusions($genome_lib_dir, $target_fusions_file, $max_neighbor_dist);
     
     exit(0);
-
 }
 
-
-####
-sub parse_build_info {
-    my ($build_info_file) = @_;
-
-    my @build_info;
-    
-    open (my $fh, $build_info_file) or die "Error, cannot open file $build_info_file";
-    while (<$fh>) {
-        chomp;
-        if (/^\#/) { next; }
-        unless (/\w/) { next; }
-        my ($filename, $module) = split(/\s+/);
-        push (@build_info, [$filename, $module]);
-    }
-    close $fh;
-
-    return(@build_info);
-}
 
 ####
 sub annotate_fusions {
-    my ($fusion_annot_lib, $target_fusions_file, $max_neighbor_dist) = @_;
+    my ($genome_lib_dir, $target_fusions_file, $max_neighbor_dist) = @_;
 
-    my $fusion_lib_idx = "$fusion_annot_lib/fusion_lib.idx";
+    my $fusion_lib_idx = "$genome_lib_dir/fusion_annot_lib.idx";
+
+    unless (-s $fusion_lib_idx) {
+        die "Error, cannot locate required database file: $fusion_lib_idx  -  be sure to use the latest versions of CTAT genome libs and prep functionality: http://star-fusion.github.io ";
+    }
     
     my $idx = new TiedHash( { use => $fusion_lib_idx } );
 
@@ -220,6 +87,7 @@ sub annotate_fusions {
         my $line = $_;
         chomp;
         if (/^\#/ && $is_first) { 
+            # add header field column for annotations
             print "$_\tannots\n";
             $is_first = 0;
             next; 
