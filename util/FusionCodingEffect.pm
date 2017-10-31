@@ -413,5 +413,5 @@ sub get_candidate_breaks {
 }
 
         
-; #EOM
+1; #EOM
 
