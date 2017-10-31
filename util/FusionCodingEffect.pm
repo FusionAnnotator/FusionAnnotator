@@ -412,6 +412,26 @@ sub get_candidate_breaks {
     return(keys %breaks);
 }
 
+###
+sub get_translation_phase {
+    my ($codon_phase) = @_;
+
+    # codon positions:
+    # 12012012012012012012012012012012012012012012012012012012012012012012012012012012012012012012
+    # CATCGGCGCCCATACCGCAGGGCGGTGAGATTGCGAAGGACTGGGTCTTTATCAACTACACGTACAAACGATTCGAGGTGCGAAATTTGGAG
+
+    # translation above actually starts in reading frame 3 of (1,2,3) - see the zero position.
+
+    my %phase_translation = (0 => 0,
+                             1 => 2,
+                             2 => 1);
+
+    my $translate_phase = $phase_translation{$codon_phase} + 1;
+
+    return($translate_phase);
+
+}
+
         
 1; #EOM
 
