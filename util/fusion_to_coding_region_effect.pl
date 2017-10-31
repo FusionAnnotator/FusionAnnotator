@@ -149,8 +149,6 @@ main: {
                 ||
                 length($b->{prot_fusion_seq}) <=> length($a->{prot_fusion_seq}) } @results;
             
-            #my $result = shift @results;
-            
             foreach my $result (@results) {
                 print join("\t", 
                            $line,
