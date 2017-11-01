@@ -304,13 +304,17 @@ sub validate_cds_obj_reading_frames {
         my $translate_phase = &get_translation_phase($phase_beg);
         
         my $pep = translate_sequence($seg_seq, $translate_phase);
-        unless ($pep) {
+        
+        if ($pep) {
+            $pep =~ s/\*$//; # trim stop
+        }
+        else {
             #die "Error, no pep for seq [$seg_seq]";
             $pep = "";
         }
         if (!$first_pep) {
             $first_pep = $pep;
-            $first_pep =~ s/\*$//; # trim stop
+            
             
             if ($first_pep =~ /\*/) {
                 $PROBLEM_GENE{$gene} = 1;
