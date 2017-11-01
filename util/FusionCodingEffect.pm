@@ -154,11 +154,14 @@ sub split_cds_at_breakpoint {
                 
                 if ($segment->{phase_beg} ne '.') {
                     my $supposed_end_phase = ($new_right_segment->{phase_beg} + ($new_right_segment->{rel_rend} - $new_right_segment->{rel_lend})) % 3;
-                    print "supposed end phase: $supposed_end_phase\n" if $DEBUG;
-                    assert($supposed_end_phase == $new_right_segment->{phase_end});
+                    print STDERR "supposed end phase: $supposed_end_phase\n" if $DEBUG;
+                    if ($supposed_end_phase != $new_right_segment->{phase_end}) {
+                        confess "Error, phases don't match: \n"
+                            . "Starting segment: " . Dumper($segment) . "\n" 
+                            . "and Split segments: " . Dumper([$new_left_segment, $new_right_segment]);
+                    }
                 }
                 
-             
             }
             else {
                 ## orient eq '-'
@@ -167,8 +170,8 @@ sub split_cds_at_breakpoint {
                                           lend => $breakpoint_coord,
                                           rend => $segment->{rend},
                                           orient => $orient,
-                                          rel_lend => $segment->{rel_rend} + ($segment->{rend} - $breakpoint_coord),
-                                          rel_rend => $segment->{rel_rend},
+                                          rel_lend => $segment->{rel_lend},
+                                          rel_rend => $segment->{rel_lend} + ($segment->{rend} - $breakpoint_coord), # matches breakpoint
                                           phase_beg => $segment->{phase_beg},
                                           phase_end => ".", # set below
                 };
@@ -176,13 +179,13 @@ sub split_cds_at_breakpoint {
                 if ($segment->{phase_beg} ne '.') {
                     $new_right_segment->{phase_end} = ($segment->{phase_beg} + (($segment->{rend} - $breakpoint_coord))) % 3;
                 }
-
+                
                 my $new_left_segment = { chr => $segment->{chr},
                                          lend => $segment->{lend},
                                          rend => $breakpoint_coord,
                                          orient => $orient,
-                                         rel_lend => $segment->{rel_lend},
-                                         rel_rend => $new_right_segment->{rel_lend},
+                                         rel_lend => $new_right_segment->{rel_rend}, # matches breakpoint
+                                         rel_rend => $segment->{rel_rend},
                                          phase_beg => $new_right_segment->{phase_end},
                                          phase_end => $segment->{phase_end},
                 };
@@ -194,9 +197,17 @@ sub split_cds_at_breakpoint {
                     "\nNew frags: " . &segments_to_string($new_left_segment) . "\t" . &segments_to_string($new_right_segment) . "\n\n" if $DEBUG;
                 
                 if ($segment->{phase_beg} ne ".") {
-                    assert($new_right_segment->{phase_end} == ($new_right_segment->{phase_beg} + $new_right_segment->{rend} - $new_right_segment->{lend}) % 3);
+                    unless ($new_right_segment->{phase_end} == ($new_right_segment->{phase_beg} + $new_right_segment->{rend} - $new_right_segment->{lend}) % 3) {
+                        confess "Error, phases don't match: \n"
+                            . "Starting segment: " . Dumper($segment) . "\n" 
+                            . "and Split segments: " . Dumper([$new_left_segment, $new_right_segment]);
+                    }                        
                     
-                    assert($new_left_segment->{phase_end} == ($new_left_segment->{phase_beg} + $new_left_segment->{rend} - $new_left_segment->{lend}) % 3);
+                    unless ($new_left_segment->{phase_end} == ($new_left_segment->{phase_beg} + $new_left_segment->{rend} - $new_left_segment->{lend}) % 3) {
+                        confess "Error, phases don't match: \n"
+                            . "Starting segment: " . Dumper($segment) . "\n" 
+                            . "and Split segments: " . Dumper([$new_left_segment, $new_right_segment]);
+                    }
                 }
             }                
             
