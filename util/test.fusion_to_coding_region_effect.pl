@@ -66,7 +66,7 @@ my %PROBLEM_GENE;
 
 main: {
 
-    {
+    if (0) {
         # examining each gene separately
         my @genes;
         if ($fusion_name) {
@@ -170,8 +170,8 @@ sub examine_gene_pair {
                         my $fusion_seq = join("", lc($left_cds_part), uc($right_cds_part));
                         my $pep = translate_sequence($fusion_seq, &get_translation_phase($initial_left_seg->{phase_beg}));
 
-                        my $pep_left = translate_sequence($left_cds_part, &get_translation_phase($initial_left_seg->{phase_beg}));
-                        my $pep_right = translate_sequence($right_cds_part, &get_translation_phase($initial_right_seg->{phase_beg}));
+                        my $pep_left = translate_sequence($left_cds_part, &get_translation_phase($initial_left_seg->{phase_beg})) || "";
+                        my $pep_right = translate_sequence($right_cds_part, &get_translation_phase($initial_right_seg->{phase_beg})) || "";
                         
                         
                         my $prot_fusion_type = "NA";
