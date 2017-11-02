@@ -177,7 +177,7 @@ sub split_cds_at_breakpoint {
                 };
                 
                 if ($segment->{phase_beg} ne '.') {
-                    $new_right_segment->{phase_end} = ($segment->{phase_beg} + (($segment->{rend} - $breakpoint_coord))) % 3;
+                    $new_right_segment->{phase_end} = ($segment->{phase_beg} + ($segment->{rend} - $breakpoint_coord)) % 3;
                 }
                 
                 my $new_left_segment = { chr => $segment->{chr},
