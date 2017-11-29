@@ -18,7 +18,7 @@ my $usage = <<__EOUSAGE__;
 ############################################################################
 #
 #  --genome_lib_dir <string>      directory containing genome lib (see http://STAR-Fusion.github.io)
-#
+#                                  (if env var CTAT_GENOME_LIB is set, not required)
 #  and
 #
 #  --annotate <string>             fusion predictions to annotate.
@@ -59,6 +59,11 @@ my $FUSION_NAME_COLUMN = 0;
 
 if ($help_flag) { die $usage; }
 
+unless ($genome_lib_dir) {
+    $genome_lib_dir = $ENV{CTAT_GENOME_LIB};
+}
+
+
 unless ($genome_lib_dir && $target_fusions_file) { die $usage; }
 
 main: {
@@ -81,6 +86,15 @@ sub annotate_fusions {
     
     my $idx = new TiedHash( { use => $fusion_lib_idx } );
 
+
+    # include blast pair info
+    my $blast_pairs_idx = "$genome_lib_dir/blast_pairs.idx";
+    unless (-s $blast_pairs_idx) {
+        die "Error, cannot locate required blast pairs index file at: $blast_pairs_idx";
+    }
+    my $blast_idx = new TiedHash( { use => $blast_pairs_idx } );
+    
+    
     my $is_first = 1;
     open (my $fh, $target_fusions_file) or die "Error, cannot open file $target_fusions_file";
     while (<$fh>) {
@@ -105,7 +119,7 @@ sub annotate_fusions {
             next;
         }
         
-        if (my @annots = &get_annotations($idx, $geneA, $geneB, $max_neighbor_dist)) {
+        if (my @annots = &get_annotations($idx, $geneA, $geneB, $max_neighbor_dist, $blast_idx)) {
             push (@x, join(",", @annots));
         }
         else {
@@ -123,7 +137,7 @@ sub annotate_fusions {
 
 ####
 sub get_annotations {
-    my ($idx, $geneA, $geneB, $max_neighbor_dist) = @_;
+    my ($idx, $geneA, $geneB, $max_neighbor_dist, $blast_idx) = @_;
     
     
     if ($geneA eq $geneB) {
@@ -143,6 +157,7 @@ sub get_annotations {
         if (my $geneAnnot = $idx->get_value("$gene")) {
             push (@annotations, "${gene}" . "->" . "$geneAnnot");
         }
+
     }
     
     # get annot pair info:
@@ -158,7 +173,11 @@ sub get_annotations {
             if (my @dist_annots = &get_distance_annotation($idx, $geneA, $geneB, $max_neighbor_dist)) {
                 push (@annotations, @dist_annots);
             }
-        }
+            
+            if (my $blast_annot = $blast_idx->get_value("$geneA--$geneB")) {
+                push (@annotations, "BLASTPAIR:$blast_annot");
+            }
+       }
     }
     
     return(@annotations);
