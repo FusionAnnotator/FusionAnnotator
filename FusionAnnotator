@@ -8,7 +8,7 @@ use lib ("$FindBin::Bin/PerlLib");
 use Getopt::Long qw(:config posix_default no_ignore_case bundling pass_through);
 use TiedHash;
 use File::Basename;
-
+use JSON::XS;
 
 my $max_neighbor_dist = 100000;
 
@@ -30,6 +30,8 @@ my $usage = <<__EOUSAGE__;
 #
 #  --fusion_name_col|C <int>         default: 0
 #
+#  --full                            include full annotation (can be a long json string)
+#
 ############################################################################
 
 
@@ -44,6 +46,7 @@ my $genome_lib_dir;
 my $target_fusions_file;
 my $FUSION_NAME_COLUMN = 0;
 
+my $FULL_ANNOT_MODE = 0;
 
 &GetOptions ( 'h' => \$help_flag,
               
@@ -54,6 +57,7 @@ my $FUSION_NAME_COLUMN = 0;
               
               'fusion_name_col|C=i' => \$FUSION_NAME_COLUMN,
 
+              'full' => \$FULL_ANNOT_MODE,
               
     );
 
@@ -62,7 +66,7 @@ if ($help_flag) { die $usage; }
 unless ($genome_lib_dir && $target_fusions_file) { die $usage; }
 
 main: {
-
+    
     &annotate_fusions($genome_lib_dir, $target_fusions_file, $max_neighbor_dist);
     
     exit(0);
@@ -105,8 +109,8 @@ sub annotate_fusions {
             next;
         }
         
-        if (my @annots = &get_annotations($idx, $geneA, $geneB, $max_neighbor_dist)) {
-            push (@x, join(",", @annots));
+        if (my $annotation = &get_annotations($idx, $geneA, $geneB, $max_neighbor_dist)) {
+            push (@x, $annotation);
         }
         else {
             push (@x, '.');
@@ -125,12 +129,11 @@ sub annotate_fusions {
 sub get_annotations {
     my ($idx, $geneA, $geneB, $max_neighbor_dist) = @_;
     
+
+    my @simple_annots;
+    my %complex_annots;
+
     
-    if ($geneA eq $geneB) {
-        return("[SELFIE]");
-    }
-
-
     ## check for individual gene annotations (eg. oncogene)
     my @genesA = split(/,/, $geneA);
     my @genesB = split(/,/, $geneB);
@@ -141,7 +144,7 @@ sub get_annotations {
     # add general gene info:
     foreach my $gene (@genesA, @genesB) {
         if (my $geneAnnot = $idx->get_value("$gene")) {
-            push (@annotations, "${gene}" . "->" . "$geneAnnot");
+            $complex_annots{$gene} = $geneAnnot;
         }
     }
     
@@ -149,19 +152,53 @@ sub get_annotations {
     foreach my $geneA (@genesA) {
         foreach my $geneB (@genesB) {
             
-            my $annotation_text = $idx->get_value("$geneA--$geneB");
-                        
-            if ($annotation_text) {
-                push (@annotations, $annotation_text);
-            }
             
+            if ($geneA eq $geneB) {
+                push (@simple_annots, "SELFIE");
+            }
+
+            my $fusion_name = "$geneA--$geneB";
+            
+            if (my $simple_annotation_text = $idx->get_value("$fusion_name$;SIMPLE")) {
+                push (@simple_annots, $simple_annotation_text);
+            }
+            if (my $complex_annotation_text = $idx->get_value("$fusion_name$;COMPLEX")) {
+                $complex_annots{$fusion_name} = decode_json($complex_annotation_text);
+            }
+
             if (my @dist_annots = &get_distance_annotation($idx, $geneA, $geneB, $max_neighbor_dist)) {
-                push (@annotations, @dist_annots);
+                push (@simple_annots, @dist_annots);
+                $complex_annots{$fusion_name}->{LOCALITY} = [@dist_annots];
             }
         }
     }
+
+
+    if ($FULL_ANNOT_MODE) {
+        my $json = encode_json(\%complex_annots);
+        return($json);
+    }
+    else {
+        
+        my $simple_annots_text = "";
+        if ($simple_annots[0] =~ /^\[.*\]$/) {
+            # json array
+            eval {
+                my $arrayref = decode_json($simple_annots[0]);
+                shift @simple_annots;
+                if (@simple_annots) {
+                    push (@$arrayref, @simple_annots);
+                }
+                $simple_annots_text = encode_json($arrayref);
+            };
+        }
+        unless ($simple_annots_text) {
+            $simple_annots_text = join(", ", @simple_annots);
+        }
+
+        return($simple_annots_text);
+    }
     
-    return(@annotations);
 }
 
 ####
