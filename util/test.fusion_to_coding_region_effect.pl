@@ -66,7 +66,10 @@ my %PROBLEM_GENE;
 
 main: {
 
-    {
+    if (1) {
+
+        print STDERR "-Validating each gene separately\n";
+        
         # examining each gene separately
         my @genes;
         if ($fusion_name) {
@@ -82,6 +85,9 @@ main: {
         
         
     }
+
+
+    print STDERR "\n\n-Exploring all fusion pairs\n\n";
     
     # examining fusions
     if ($fusion_name) {
@@ -143,7 +149,12 @@ sub examine_gene_pair {
 
             my @left_breaks = &get_candidate_breaks($cds_left_obj, 'left');
             my @right_breaks = &get_candidate_breaks($cds_right_obj, 'right');
+    
+
+            push (@left_breaks, &generate_random_breaks($cds_left_obj, 3));
+            push (@right_breaks, &generate_random_breaks($cds_right_obj, 3));
             
+        
             foreach my $break_left (@left_breaks) {
                 foreach my $break_right (@right_breaks) {
 
@@ -170,8 +181,8 @@ sub examine_gene_pair {
                         my $fusion_seq = join("", lc($left_cds_part), uc($right_cds_part));
                         my $pep = translate_sequence($fusion_seq, &get_translation_phase($initial_left_seg->{phase_beg}));
 
-                        my $pep_left = translate_sequence($left_cds_part, &get_translation_phase($initial_left_seg->{phase_beg}));
-                        my $pep_right = translate_sequence($right_cds_part, &get_translation_phase($initial_right_seg->{phase_beg}));
+                        my $pep_left = translate_sequence($left_cds_part, &get_translation_phase($initial_left_seg->{phase_beg})) || "";
+                        my $pep_right = translate_sequence($right_cds_part, &get_translation_phase($initial_right_seg->{phase_beg})) || "";
                         
                         
                         my $prot_fusion_type = "NA";
@@ -182,7 +193,7 @@ sub examine_gene_pair {
                         my $left_segs_string = &segments_to_string(@$left_fuse_segments_aref);
                         my $right_segs_string = &segments_to_string(@$right_fuse_segments_aref);
                         
-                        push (@results, { cds_left_id => $cds_left_id,
+                        my $result = {cds_left_id => $cds_left_id,
                                           cds_right_id => $cds_right_id,
                                           cds_left_range => "1-$left_rel_rend",
                                           cds_right_range => "$right_rel_lend-" . length($cds_right_seq),
@@ -192,70 +203,63 @@ sub examine_gene_pair {
                                           fusion_coding_descr => join("<==>", $left_segs_string, $right_segs_string),
                                           pep_left => $pep_left,
                                           pep_right => $pep_right
-                              }
-                            );
+                        };
+
                         
+                        my $STATUS = "OK";
+                        unless ($PROBLEM_GENE{$gene_left} || $PROBLEM_GENE{$gene_right}) {
+                            if ($result->{prot_fusion_seq} =~ /\*\S/) {
+                                if ($result->{prot_fusion_type} ne "FRAMESHIFT") {
+                                    
+                                    ## see if it has just a single -inframe stop
+                                    my $prot_fusion_seq = $result->{prot_fusion_seq};
+                                    chop $prot_fusion_seq;
+                                    my $num_internal_stops = 0;
+                                    while ($prot_fusion_seq =~ /\*/g) {
+                                        $num_internal_stops++;
+                                    }
+                                    if ($num_internal_stops == 1) {
+                                        $STATUS = "INFRAMESTOP";
+                                    }
+                                    else {
+                                        $STATUS = "ERROR-$num_internal_stops";
+                                    }
+                                }
+                            }
+                            elsif ($result->{prot_fusion_seq} =~ /^M[^\*]+\*/ && $result->{prot_fusion_type} eq "FRAMESHIFT") {
+                                my $cds_fusion_seq = $result->{cds_fusion_seq};
+                                $cds_fusion_seq =~ /[a-z]([A-Z]+)$/;
+                                my $fusion_ptB_len = length($1);
+                                my $stop_codon = substr($cds_fusion_seq, -3);
+                                if (length($1) > 100 && $stop_codon =~ /^(TGA|TAA|TAG)$/) {
+                                    $STATUS = "ERROR-notFrameshift";
+                                }
+                            }
+                            
+                            elsif ($result->{prot_fusion_type} eq "FRAMESHIFT") {
+                                #$STATUS = "ERROR";
+                            }
+                        }
+
+                        
+                        print join("\t",
+                                   $STATUS,
+                                   $fusion_name,
+                                   $result->{cds_left_id}, $result->{cds_left_range},
+                                   $result->{cds_right_id}, $result->{cds_right_range},
+                                   $result->{prot_fusion_type},
+                                   $result->{fusion_coding_descr},
+                                   $result->{cds_fusion_seq},
+                                   $result->{prot_fusion_seq},
+                                   $result->{pep_left},
+                                   $result->{pep_right}
+                                   
+                            ) . "\n";
                     }
                 }
             }
         }
     }
-
-
-
-    if (@results) {
-        
-        foreach my $result (@results) {
-
-            my $STATUS = "OK";
-            if ($result->{prot_fusion_seq} =~ /\*\S/) {
-                if ($result->{prot_fusion_type} ne "FRAMESHIFT") {
-
-                    ## see if it has just a single -inframe stop
-                    my $prot_fusion_seq = $result->{prot_fusion_seq};
-                    chop $prot_fusion_seq;
-                    my $num_internal_stops = 0;
-                    while ($prot_fusion_seq =~ /\*/g) {
-                        $num_internal_stops++;
-                    }
-                    if ($num_internal_stops == 1) {
-                        $STATUS = "INFRAMESTOP";
-                    }
-                    else {
-                        $STATUS = "ERROR-$num_internal_stops";
-                    }
-                }
-            }
-            elsif ($result->{prot_fusion_seq} =~ /^M[^\*]+\*/ && $result->{prot_fusion_type} eq "FRAMESHIFT") {
-                my $cds_fusion_seq = $result->{cds_fusion_seq};
-                $cds_fusion_seq =~ /[a-z]([A-Z]+)$/;
-                my $fusion_ptB_len = length($1);
-                my $stop_codon = substr($cds_fusion_seq, -3);
-                if (length($1) > 100 && $stop_codon =~ /^(TGA|TAA|TAG)$/) {
-                    $STATUS = "ERROR-notFrameshift";
-                }
-            }
-            
-            elsif ($result->{prot_fusion_type} eq "FRAMESHIFT") {
-                #$STATUS = "ERROR";
-            }
-            
-            print join("\t",
-                       $STATUS,
-                       $fusion_name,
-                       $result->{cds_left_id}, $result->{cds_left_range},
-                       $result->{cds_right_id}, $result->{cds_right_range},
-                       $result->{prot_fusion_type},
-                       $result->{fusion_coding_descr},
-                       $result->{cds_fusion_seq},
-                       $result->{prot_fusion_seq},
-                       $result->{pep_left},
-                       $result->{pep_right}
-                       
-                ) . "\n";
-        }
-    }
-    
     
     return;
     
@@ -292,6 +296,7 @@ sub validate_cds_obj_reading_frames {
 
     my $prev_seg = undef;
     my $first_pep = "";
+    my $initial_phase = $segments[0]->{phase_beg};
     while (@segments)  {
         my $segs_string = &segments_to_string(@segments);
         my $rel_lend = $segments[0]->{rel_lend};
@@ -299,18 +304,31 @@ sub validate_cds_obj_reading_frames {
 
         my $seg_phase_seq = substr($phase_seq, $rel_lend -1);
         my $phase_beg = $segments[0]->{phase_beg};
-        my $theor_phase = ($rel_lend - 1) % 3;
-
+        my $theor_phase = ($rel_lend + $initial_phase - 1) % 3;
+        if ($theor_phase != $phase_beg) {
+            confess "Error, phase_beg not $theor_phase: " . Dumper($segments[0]);
+        }
+        my $rel_rend = $segments[0]->{rel_rend};
+        my $phase_end = $segments[0]->{phase_end};
+        my $theor_phase_end = ($phase_beg + $rel_rend - $rel_lend +1 -1) % 3;
+        if ($theor_phase_end != $phase_end) {
+            confess "Error, phase_end not $theor_phase_end: " . Dumper($segments[0]);
+        }
+        
         my $translate_phase = &get_translation_phase($phase_beg);
         
         my $pep = translate_sequence($seg_seq, $translate_phase);
-        unless ($pep) {
+        
+        if ($pep) {
+            $pep =~ s/\*$//; # trim stop
+        }
+        else {
             #die "Error, no pep for seq [$seg_seq]";
             $pep = "";
         }
         if (!$first_pep) {
             $first_pep = $pep;
-            $first_pep =~ s/\*$//; # trim stop
+            
             
             if ($first_pep =~ /\*/) {
                 $PROBLEM_GENE{$gene} = 1;
@@ -320,7 +338,7 @@ sub validate_cds_obj_reading_frames {
             die "Error, stop introduced in translation of downstream segments ";
         }
         
-        my $rel_rend = $segments[0]->{rel_rend};
+        
         print join("\t", $segs_string, "$rel_lend-$rel_rend...", $phase_beg, "?$theor_phase", $seg_phase_seq, $seg_seq, $pep) . "\n";
 
         if ($prev_seg) {
@@ -338,4 +356,27 @@ sub validate_cds_obj_reading_frames {
 }
 
 
+####
+sub generate_random_breaks {
+    my ($cds_obj, $num_breaks) = @_;
+
+    
+    my @segments = sort {$a->{lend}<=>$b->{lend}} @{$cds_obj->{phased_segments}};
+
+    my $chr = $segments[0]->{chr};
+    my $orient = $segments[0]->{orient};
+    
+    my @breaks;
+    
+    for(1..$num_breaks) {
+
+        my $rand_segment = $segments[int(rand(scalar(@segments)))];
+        my ($lend, $rend) = ($rand_segment->{lend}, $rand_segment->{rend});
+        my $seg_len = $rend - $lend + 1;
+        my $random_break = $lend + 1 + int(rand($seg_len-1));
+        push (@breaks, "$chr:$random_break:$orient");
+    }
+
+    return(@breaks);
+}
 
