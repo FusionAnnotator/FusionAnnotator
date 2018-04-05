@@ -68,7 +68,7 @@ unless ($genome_lib_dir) {
 }
 
 
-unless ($genome_lib_dir && $target_fusions_file) { die $usage; }
+unless ($genome_lib_dir) { die $usage; }
 
 main: {
     
@@ -100,7 +100,13 @@ sub annotate_fusions {
     
     
     my $is_first = 1;
-    open (my $fh, $target_fusions_file) or die "Error, cannot open file $target_fusions_file";
+    my $fh;
+    if ($target_fusions_file) {
+        open ($fh, $target_fusions_file) or die "Error, cannot open file $target_fusions_file";
+    }
+    else {
+        $fh = *STDIN;
+    }
     while (<$fh>) {
         my $line = $_;
         chomp;
@@ -133,7 +139,6 @@ sub annotate_fusions {
         print join("\t", @x) . "\n";
         $is_first = 0;
     }
-    close $fh;
 
     return;
 }
@@ -158,9 +163,14 @@ sub get_annotations {
     # add general gene info:
     foreach my $gene (@genesA, @genesB) {
         if (my $geneAnnot = $idx->get_value("$gene")) {
-            $complex_annots{$gene} = $geneAnnot;
+            if (my $gene_annot = $idx->get_value("$gene$;COMPLEX")) {
+                $complex_annots{$gene} = decode_json($gene_annot);
+            }
+            elsif (my $gene_type = $idx->get_value("$gene$;GENE_TYPE")) {
+                # better than nothing.
+                $complex_annots{$gene} = $gene_type;
+            }
         }
-
     }
     
     # get annot pair info:
@@ -188,7 +198,9 @@ sub get_annotations {
             
             if (my $blast_annot = $blast_idx->get_value("$geneA--$geneB")) {
                 push (@annotations, "BLASTPAIR:$blast_annot");
+                $complex_annots{$fusion_name}->{BLASTPAIR} = $blast_annot;
             }
+
        }
     }
 
@@ -200,7 +212,7 @@ sub get_annotations {
     else {
         
         my $simple_annots_text = "";
-        if ($simple_annots[0] =~ /^\[.*\]$/) {
+        if (@simple_annots && $simple_annots[0] =~ /^\[.*\]$/) {
             # json array
             eval {
                 my $arrayref = decode_json($simple_annots[0]);
@@ -212,9 +224,9 @@ sub get_annotations {
             };
         }
         unless ($simple_annots_text) {
-            $simple_annots_text = join(", ", @simple_annots);
+            $simple_annots_text = encode_json([@simple_annots]);
         }
-
+        
         return($simple_annots_text);
     }
     
