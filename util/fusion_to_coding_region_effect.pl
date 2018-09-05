@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 use Carp;
-use Carp::Assert;
+#use Carp::Assert;
 use Getopt::Long qw(:config posix_default no_ignore_case bundling pass_through);
 use Data::Dumper;
 use JSON::XS;
