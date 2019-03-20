@@ -12,7 +12,7 @@ use lib ("$FindBin::Bin/../PerlLib", "$FindBin::Bin");
 use TiedHash;
 use Nuc_translator;
 use FusionCodingEffect;
-
+use DelimParser;
 
 my $DEBUG = 0;
 
@@ -71,49 +71,24 @@ my %priority = ( 'INFRAME' => 1,
 main: {
 
     open (my $fh, $fusions_file) or die "Error, cannot open file $fusions_file";
-    my $header = <$fh>;
     
-    unless ($header =~ /^\#/) {
-        die "Error, fusion_file: $fusions_file has unrecognizable header: $header";
-    }
-    chomp $header;
-   
-    my %header_to_index;
-    {
-        my @fields = split(/\t/, $header);
-        for (my $i = 0; $i <= $#fields; $i++) {
-            $header_to_index{$fields[$i]} = $i;
-        }
-        
-        # ensure we have the fields we need:
-        my @fields_need = ('#FusionName', 'LeftGene', 'LeftBreakpoint', 'RightGene', 'RightBreakpoint');
-        my $missing_field = 0;
-        foreach my $field (@fields_need) {
-            unless (exists $header_to_index{$field}) {
-                print STDERR "ERROR, missing column header: $field\n";
-                $missing_field = 1;
-            }
-        }
-        if ($missing_field) {
-            die "Error, at least one column header was missing";
-        }
-    }
+    my $delim_reader = new DelimParser::Reader($fh, "\t");
+    my @column_headers = $delim_reader->get_column_headers();
+    
+    push (@column_headers, "CDS_LEFT_ID", 
+          "CDS_LEFT_RANGE",
+          "CDS_RIGHT_ID",
+          "CDS_RIGHT_RANGE",
+          "PROT_FUSION_TYPE",
+          "FUSION_MODEL",
+          "FUSION_CDS",
+          "FUSION_TRANSL",
+          "PFAM_LEFT",
+          "PFAM_RIGHT");
+
+    my $delim_writer = new DelimParser::Writer(*STDOUT, "\t", \@column_headers);
     
 
-    print $header . "\t" . join("\t", 
-                                "CDS_LEFT_ID", 
-                                "CDS_LEFT_RANGE",
-                                "CDS_RIGHT_ID",
-                                "CDS_RIGHT_RANGE",
-                                "PROT_FUSION_TYPE",
-                                "FUSION_MODEL",
-                                "FUSION_CDS",
-                                "FUSION_TRANSL",
-                                "PFAM_LEFT",
-                                "PFAM_RIGHT",
-        ) . "\n";
-        
-    
     my $prot_info_db_tied_hash = new TiedHash( { 'use' => $prot_info_db } );
 
     my $pfam_domain_dbm = "$genome_lib_dir/pfam_domains.dbm";
@@ -122,21 +97,16 @@ main: {
         $pfam_domain_db_tied_hash = new TiedHash( { 'use' => $pfam_domain_dbm } );
     }
     
-    
-    while (<$fh>) {
-        chomp;        
-        my $line = $_;
 
-        my @x = split(/\t/);
-
-        my $fusion_name = $x[ $header_to_index{'#FusionName'} ];
-        my $gene_left = $x[ $header_to_index{'LeftGene'}];
-        my $break_left = $x[ $header_to_index{'LeftBreakpoint'} ];
-                
-        my $gene_right = $x[ $header_to_index{'RightGene'} ];
-        my $break_right = $x[ $header_to_index{'RightBreakpoint'} ];
+    while (my $row = $delim_reader->get_row() ) {
         
-
+        my $fusion_name = $delim_reader->get_row_val($row, '#FusionName');
+        my $gene_left = $delim_reader->get_row_val($row, 'LeftGene');
+        my $break_left = $delim_reader->get_row_val($row, 'LeftBreakpoint');
+        
+        my $gene_right = $delim_reader->get_row_val($row, 'RightGene');
+        my $break_right = $delim_reader->get_row_val($row, 'RightBreakpoint');
+                
         # remove gene symbol, just want gene ID
         $gene_left =~ s/^.*\^//;
         $gene_right =~ s/^.*\^//;
@@ -152,19 +122,19 @@ main: {
                 length($b->{prot_fusion_seq}) <=> length($a->{prot_fusion_seq}) } @results;
             
             foreach my $result (@results) {
-                print join("\t", 
-                           $line,
-                           $result->{cds_left_id}, $result->{cds_left_range},
-                           $result->{cds_right_id}, $result->{cds_right_range},
-                           $result->{prot_fusion_type},
-                           $result->{fusion_coding_descr},
-                           $result->{cds_fusion_seq},
-                           $result->{prot_fusion_seq},
-                           
-                           $result->{left_domains},
-                           $result->{right_domains}
-                           
-                    ) . "\n";
+                
+                $row->{"CDS_LEFT_ID"} = $result->{cds_left_id};
+                $row->{"CDS_LEFT_RANGE"} = $result->{cds_left_range};
+                $row->{"CDS_RIGHT_ID"} = $result->{cds_right_id};
+                $row->{"CDS_RIGHT_RANGE"} = $result->{cds_right_range};
+                $row->{"PROT_FUSION_TYPE"} = $result->{prot_fusion_type};
+                $row->{"FUSION_MODEL"} = $result->{prot_fusion_type};
+                $row->{"FUSION_CDS"} = $result->{cds_fusion_seq};
+                $row->{"FUSION_TRANSL"} = $result->{prot_fusion_seq};
+                $row->{"PFAM_LEFT"} = $result->{left_domains};
+                $row->{"PFAM_RIGHT"} = $result->{right_domains};
+                
+                $delim_writer->write_row($row);
                 
                 unless ($show_all_flag) {
                     # only showing first entry.
@@ -173,12 +143,26 @@ main: {
             }
         }
         else {
-            print "$line" . ("\t." x 10) . "\n";
+            ## no results to report
+            
+            $row->{"CDS_LEFT_ID"} = '.';
+            $row->{"CDS_LEFT_RANGE"} = '.';
+            $row->{"CDS_RIGHT_ID"} = '.';
+            $row->{"CDS_RIGHT_RANGE"} = '.';
+            $row->{"PROT_FUSION_TYPE"} = '.';
+            $row->{"FUSION_MODEL"} = '.';
+            $row->{"FUSION_CDS"} = '.';
+            $row->{"FUSION_TRANSL"} = '.';
+            $row->{"PFAM_LEFT"} = '.';
+            $row->{"PFAM_RIGHT"} = '.';
+            
+            $delim_writer->write_row($row);
+            
         }
 
     }
-    close $fh;
-    
+
+        
     
     exit(0);
 }
