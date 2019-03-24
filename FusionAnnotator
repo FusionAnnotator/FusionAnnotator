@@ -90,7 +90,15 @@ sub annotate_fusions {
     
     my $idx = new TiedHash( { use => $fusion_lib_idx } );
 
-
+    ## ensure it works!!
+    {
+        my $simple_annotation_text = $idx->get_value("BCR--ABL1$;SIMPLE");
+        unless ($simple_annotation_text) {
+            confess("\n\t*** Error, FusionAnnot lib doesnt appear to be working. Rebuilding fusion annot lib will be required");
+        }
+    }
+    
+    
     # include blast pair info
     my $blast_pairs_idx = "$genome_lib_dir/blast_pairs.idx";
     unless (-s $blast_pairs_idx) {
