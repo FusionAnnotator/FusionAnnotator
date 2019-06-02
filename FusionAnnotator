@@ -92,7 +92,7 @@ sub annotate_fusions {
 
     ## ensure it works!!
     {
-        my $simple_annotation_text = $idx->get_value("BCR--ABL1$;SIMPLE");
+        my $simple_annotation_text = $idx->get_value("geneABC--geneXYZ");
         unless ($simple_annotation_text) {
             confess("\n\t*** Error, FusionAnnot lib doesnt appear to be working. Rebuilding fusion annot lib will be required");
         }
