@@ -128,7 +128,7 @@ main: {
                 $row->{"CDS_RIGHT_ID"} = $result->{cds_right_id};
                 $row->{"CDS_RIGHT_RANGE"} = $result->{cds_right_range};
                 $row->{"PROT_FUSION_TYPE"} = $result->{prot_fusion_type};
-                $row->{"FUSION_MODEL"} = $result->{prot_fusion_type};
+                $row->{"FUSION_MODEL"} = $result->{fusion_coding_descr};
                 $row->{"FUSION_CDS"} = $result->{cds_fusion_seq};
                 $row->{"FUSION_TRANSL"} = $result->{prot_fusion_seq};
                 $row->{"PFAM_LEFT"} = $result->{left_domains};
