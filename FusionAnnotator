@@ -130,7 +130,7 @@ sub annotate_fusions {
         if ($fusion =~ /\|/) {
             $fusion =~ s/^.*\|//;
         }
-        my ($geneA, $geneB) = split(/--/, $fusion);
+        my ($geneA, $geneB) = split(/--|\:\:/, $fusion);
         unless ($geneA && $geneB) {
             print STDERR "ERROR: cannot parse $fusion as in the geneA--geneB format, skipping...$line" unless ($is_first);
             print $line;
