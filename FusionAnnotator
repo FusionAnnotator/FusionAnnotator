@@ -32,6 +32,8 @@ my $usage = <<__EOUSAGE__;
 #
 #  --full                            include full annotation (can be a long json string)
 #
+#  --no_add_header_column           do not expect or include a header column
+# 
 ############################################################################
 
 
@@ -48,6 +50,8 @@ my $FUSION_NAME_COLUMN = 0;
 
 my $FULL_ANNOT_MODE = 0;
 
+my $NO_ADD_HEADER_COLUMN = 0;
+
 &GetOptions ( 'h' => \$help_flag,
               
               'genome_lib_dir=s' => \$genome_lib_dir,
@@ -58,6 +62,8 @@ my $FULL_ANNOT_MODE = 0;
               'fusion_name_col|C=i' => \$FUSION_NAME_COLUMN,
 
               'full' => \$FULL_ANNOT_MODE,
+
+              'no_add_header_column' => \$NO_ADD_HEADER_COLUMN, 
               
     );
 
@@ -118,7 +124,7 @@ sub annotate_fusions {
     while (<$fh>) {
         my $line = $_;
         chomp;
-        if (/^\#/ && $is_first) { 
+        if ($is_first && ! $NO_ADD_HEADER_COLUMN) { 
             # add header field column for annotations
             print "$_\tannots\n";
             $is_first = 0;
