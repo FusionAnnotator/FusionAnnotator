@@ -9,6 +9,7 @@ use Getopt::Long qw(:config posix_default no_ignore_case bundling pass_through);
 use TiedHash;
 use File::Basename;
 use JSON::XS;
+use Data::Dumper;
 
 my $max_neighbor_dist = 100000;
 
@@ -52,6 +53,8 @@ my $FULL_ANNOT_MODE = 0;
 
 my $NO_ADD_HEADER_COLUMN = 0;
 
+my $DEBUG = 0;
+
 &GetOptions ( 'h' => \$help_flag,
               
               'genome_lib_dir=s' => \$genome_lib_dir,
@@ -65,6 +68,8 @@ my $NO_ADD_HEADER_COLUMN = 0;
 
               'no_add_header_column' => \$NO_ADD_HEADER_COLUMN, 
               
+              'debug|d' => \$DEBUG,
+
     );
 
 if ($help_flag) { die $usage; }
@@ -171,20 +176,29 @@ sub get_annotations {
     my @genesA = split(/,/, $geneA);
     my @genesB = split(/,/, $geneB);
     
-
-    my @annotations;
-    
     # add general gene info:
     foreach my $gene (@genesA, @genesB) {
-        if (my $geneAnnot = $idx->get_value("$gene")) {
-            if (my $gene_annot = $idx->get_value("$gene$;COMPLEX")) {
-                $complex_annots{$gene} = decode_json($gene_annot);
-            }
-            elsif (my $gene_type = $idx->get_value("$gene$;GENE_TYPE")) {
-                # better than nothing.
-                $complex_annots{$gene} = $gene_type;
-            }
+        if ($DEBUG) {
+            print STDERR "- searching for general annot for gene [$gene]\n";
         }
+        
+
+        if (my $gene_annot = $idx->get_value("$gene$;COMPLEX")) {
+            $complex_annots{$gene} = decode_json($gene_annot);
+        }
+        if (my $gene_annot = $idx->get_value("$gene$;SIMPLE")) {
+            push (@simple_annots, $gene_annot);
+        }
+                
+        #elsif (my $gene_type = $idx->get_value("$gene$;GENE_TYPE")) {
+        #    # better than nothing.
+        #    $complex_annots{$gene} = $gene_type;
+        #}
+        #}
+    }
+    
+    if ($DEBUG) {
+        print STDERR "Individual gene annotations: " . Dumper(\%complex_annots);
     }
     
     # get annot pair info:
@@ -211,35 +225,40 @@ sub get_annotations {
             }
             
             if (my $blast_annot = $blast_idx->get_value("$geneA--$geneB")) {
-                push (@annotations, "BLASTPAIR:$blast_annot");
+                push (@simple_annots, "BLASTPAIR:$blast_annot");
                 $complex_annots{$fusion_name}->{BLASTPAIR} = $blast_annot;
             }
 
        }
     }
 
-
+    if ($DEBUG) {
+        print STDERR " - now including fusion annots: " . Dumper(\%complex_annots);
+    }
+    
     if ($FULL_ANNOT_MODE) {
         my $json = encode_json(\%complex_annots);
         return($json);
     }
     else {
         
-        my $simple_annots_text = "";
-        if (@simple_annots && $simple_annots[0] =~ /^\[.*\]$/) {
+        #my $simple_annots_text = "";
+        #if (@simple_annots && $simple_annots[0] =~ /^\[.*\]$/) {
             # json array
-            eval {
-                my $arrayref = decode_json($simple_annots[0]);
-                shift @simple_annots;
-                if (@simple_annots) {
-                    push (@$arrayref, @simple_annots);
-                }
-                $simple_annots_text = encode_json($arrayref);
-            };
-        }
-        unless ($simple_annots_text) {
-            $simple_annots_text = encode_json([@simple_annots]);
-        }
+        #    eval {
+        #        my $arrayref = decode_json($simple_annots[0]);
+        #        shift @simple_annots;
+        #        if (@simple_annots) {
+        #            push (@$arrayref, @simple_annots);
+        #        }
+        #        $simple_annots_text = encode_json($arrayref);
+        #    };
+        #}
+        #unless ($simple_annots_text) {
+        #my $simple_annots_text = encode_json([@simple_annots]);
+        #}
+        
+        my $simple_annots_text = join(";", @simple_annots);
         
         return($simple_annots_text);
     }
