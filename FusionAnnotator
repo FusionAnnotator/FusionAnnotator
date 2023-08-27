@@ -31,6 +31,8 @@ my $usage = <<__EOUSAGE__;
 #
 #  --fusion_name_col|C <int>         default: 0
 #
+#  --include_reciprocal              include annotaitons for geneA--geneB and geneB--geneA
+#
 #  --full                            include full annotation (can be a long json string)
 #
 #  --no_add_header_column           do not expect or include a header column
@@ -53,6 +55,8 @@ my $FULL_ANNOT_MODE = 0;
 
 my $NO_ADD_HEADER_COLUMN = 0;
 
+my $INCLUDE_RECIPROCAL = 0;
+
 my $DEBUG = 0;
 
 &GetOptions ( 'h' => \$help_flag,
@@ -68,6 +72,8 @@ my $DEBUG = 0;
 
               'no_add_header_column' => \$NO_ADD_HEADER_COLUMN, 
               
+              'include_reciprocal' => \$INCLUDE_RECIPROCAL,
+
               'debug|d' => \$DEBUG,
 
     );
@@ -148,8 +154,28 @@ sub annotate_fusions {
             next;
         }
         
+        
+        my $fusion_annot = "";
+        
         if (my $annotation = &get_annotations($idx, $geneA, $geneB, $max_neighbor_dist, $blast_idx)) {
-            push (@x, $annotation);
+            $fusion_annot = $annotation;
+        }
+        if ($INCLUDE_RECIPROCAL) {
+            if ($fusion_annot) {
+                $fusion_annot = "$geneA--$geneB:$fusion_annot";
+            }
+            
+            if (my $annotation = &get_annotations($idx, $geneB, $geneA, $max_neighbor_dist, $blast_idx)) {
+                
+                if ($fusion_annot) {
+                    $fusion_annot .= ";;";
+                }
+                $fusion_annot .= "(recip)$geneB--$geneA:$annotation";
+            }   
+
+        }
+        if ($fusion_annot) {
+            push (@x, $fusion_annot);
         }
         else {
             push (@x, '.');
